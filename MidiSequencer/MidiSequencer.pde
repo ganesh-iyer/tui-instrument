@@ -18,7 +18,7 @@
     <p>
     For more information about Minim and additional features, visit http://code.compartmental.net/minim/
     <p>
-    Original Author: Damien Di Fede  
+    Original Author: Damien Di Fede
   */
   
 import ddf.minim.*;
@@ -28,13 +28,21 @@ import ddf.minim.ugens.*;
 import javax.sound.midi.*;
 
 // two things we need from Minim synthesis
-Minim       minim;
+Minim minim;
 AudioOutput out;
 
+// Ganesh: initializing fragment that will be looped
+AudioInput in;
+AudioRecorder recorder;
+boolean recorded;
+FilePlayer player;
+
 // what we need from JavaSound for sequence playback
-Sequencer     sequencer;
+Sequencer sequencer;
+
 // holds the actual midi data
-Sequence      sequence;
+Sequence sequence;
+Sequence secondSequence;
 
 // the Blip class is what handles our visuals.
 // see below the draw function for the definition.
@@ -76,7 +84,7 @@ class MidiReceiver implements Receiver
 
 void setup()
 {
-  size( 640, 480 );
+  size( 1024, 768 );
   
   minim = new Minim(this);
   out   = minim.getLineOut();
@@ -95,13 +103,14 @@ void setup()
     sequencer.open();
     
     // load our sequence
-    sequence  = MidiSystem.getSequence( createInput( "bumble_bee.midi" ) );
+    sequence  = MidiSystem.getSequence( createInput( "bach.midi" ) );
+    secondSequence = MidiSystem.getSequence(createInput("stairway.midi"));
     
     // put it in the sequencer
-    sequencer.setSequence( sequence );
+    sequencer.setSequence( sequence);
     
     // set the tempo
-    sequencer.setTempoInBPM( 128 );
+    sequencer.setTempoInBPM( 70 );
     
     // hook up an instance of our Receiver to the Sequencer's Transmitter
     sequencer.getTransmitter().setReceiver( new MidiReceiver() );
@@ -126,11 +135,15 @@ void setup()
   {
     println( "Had a problem accessing the midi file, sorry bud." );
   }
-  
   // and we need to make our Blip list
   blips = new ArrayList<Blip>();
   // and set our drawing preferences
   rectMode( CENTER );
+  
+  // set fragment recording after blips because for some reason - nullPointerException
+  in = minim.getLineIn(Minim.STEREO, 2048);
+  recorder = minim.createRecorder(in, "fragment.wav");
+  textFont(createFont("Arial", 12));
 }
 
 void draw()
@@ -142,6 +155,60 @@ void draw()
   {
     blips.get(i).draw();  
   }
+  
+  if ( recorder.isRecording() )
+  {
+    text("Now recording, press the r key to stop recording.", 5, 15);
+  }
+  else if ( !recorded )
+  {
+    text("Press the r key to start recording.", 5, 15);
+  }
+  else
+  {
+    text("Press the s key to save the recording to disk and play it back in the sketch.", 5, 15);
+  }
+  
+}
+
+void keyReleased()
+{
+  if ( !recorded && key == 'r' ) 
+  {
+    // to indicate that you want to start or stop capturing audio data, 
+    // you must callstartRecording() and stopRecording() on the AudioRecorder object. 
+    // You can start and stop as many times as you like, the audio data will 
+    // be appended to the end of to the end of the file. 
+    if ( recorder.isRecording() ) 
+    {
+      recorder.endRecord();
+      recorded = true;
+    }
+    else 
+    {
+      recorder.beginRecord();
+    }
+  }
+  if ( recorded && key == 's' )
+  {
+    // we've filled the file out buffer, 
+    // now write it to a file of the type we specified in setup
+    // in the case of buffered recording, 
+    // this will appear to freeze the sketch for sometime, if the buffer is large
+    // in the case of streamed recording, 
+    // it will not freeze as the data is already in the file and all that is being done
+    // is closing the file.
+    // save returns the recorded audio in an AudioRecordingStream, 
+    // which we can then play with a FilePlayer
+    if ( player != null )
+    {
+        player.unpatch( out );
+        player.close();
+    }
+    player = new FilePlayer( recorder.save() );
+    player.patch( out );
+    player.play();
+  }
 }
 
 // the Instrument implementation we use for playing notes
@@ -150,6 +217,7 @@ void draw()
 // in javax.sound.midi. We could avoid this by importing
 // only the classes we need from javax.sound.midi, 
 // rather than importing everything.
+
 class Synth implements ddf.minim.ugens.Instrument
 {
   Oscil       wave;
@@ -165,7 +233,10 @@ class Synth implements ddf.minim.ugens.Instrument
     
     wave = new Oscil( freq, amp, Waves.QUARTERPULSE );
     // Damp arguments are: attack time, damp time, and max amplitude
-    env  = new Damp( 0.001f, 0.1f, 1.0f );
+    env  = new Damp( 0.01f, 0.5f, 1.0f );
+    
+    // writing code for looping
+    
     
     wave.patch( env );
   }
@@ -209,7 +280,7 @@ class Blip
   Blip( color c, float p, float s )
   {
     shade = c;
-    position = p;
+    position = p+200;
     size = s;
   }
   
