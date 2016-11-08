@@ -28,9 +28,22 @@ AudioRecorder loopRecorder;
 AudioOutput out;
 AudioPlayer player;
 
+import processing.serial.*;
+import cc.arduino.*;
+Arduino arduino;
+int ledPin = 13;
+int val;
+int val1;
+int val2;
+int val3;
 void setup(){
   size(512, 200, P3D);
   minim = new Minim(this);
+  
+  /**Connecting arduino to Processing.*/
+  arduino = new Arduino(this, Arduino.list()[1], 57600);
+  arduino.pinMode(ledPin, Arduino.OUTPUT);
+  arduino.pinMode(0, Arduino.INPUT); //(A0=0)
   
   // need to set variable loopIn to something that records or reuses a sample
   // right now, the issue is that it always picks up what the microphone records
@@ -41,6 +54,7 @@ void setup(){
   
   // enable monitoring seems to do absolutely nothing for this cause. causes feedback. some interesting sound though.
   loopIn.disableMonitoring();
+ 
   
   
   loopRecorder = minim.createRecorder(loopIn, "currentLoop.wav");
@@ -63,9 +77,7 @@ void setup(){
     
     // put it in the sequencer
     base.setSequence( baseSequence);
-    
-    // set the tempo
-    base.setTempoInBPM( 128 );
+   
     
     // hook up an instance of our Receiver to the Sequencer's Transmitter
     base.getTransmitter().setReceiver( new MidiReceiver() );
@@ -73,6 +85,8 @@ void setup(){
     // just keep looping
     base.setLoopCount( Sequencer.LOOP_CONTINUOUSLY );
     
+    base.startRecording();
+   
     // and away we go
     // Hello Vivian!
     base.start();
@@ -159,6 +173,24 @@ class Synth implements ddf.minim.ugens.Instrument
 }
 
 void draw(){
+
+  val = arduino.analogRead(0);
+  val1 = arduino.analogRead(1);
+  val2 = arduino.analogRead(2);
+  val3 = arduino.analogRead(3);
+  
+  
+  // set the tempo
+  base.setTempoInBPM( val/4 );
+  
+  //set loops
+  base.setLoopCount(val1/10);
+  
+  
+  
+  println(base.getLoopCount());
+  println(base.getLoopEndPoint());
+    println(base.getLoopStartPoint());
   
   // Code snippet to draw waves
   background(0); 
