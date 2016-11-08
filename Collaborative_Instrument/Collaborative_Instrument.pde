@@ -192,7 +192,7 @@ void draw(){
   //set loops
 
   
-  base.startRecording();
+  //base.startRecording();
   
   println(base.getLoopCount());
   println(base.getLoopEndPoint());
@@ -201,19 +201,15 @@ void draw(){
   println(base.getTickPosition());
   
   //loopcount isn't working out
-  int loopcount = 0;
-  while (loopcount < 2) {
-    
+
     //if we get above the tick position of 20000, go back to 10000 and play again
     if ((base.getTickPosition()) > 20000 - (val1 * 8)) {
-      base.setTickPosition(10000);
-      base.stopRecording();
-      loopcount++;
-    }
+      base.setTickPosition(10000 - (val1 * 8));
+      //base.stopRecording();
+    
   }
   
-  delay(10000);
-  
+
   // Code snippet to draw waves
   background(0); 
   stroke(255);
